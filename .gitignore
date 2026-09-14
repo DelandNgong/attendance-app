@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Environment variables (Firebase keys, etc.) — NEVER commit this file
+.env
+.env.local
+.env.*.local
+
+# Editor/OS files
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase local cache
+.firebase/
+firebase-debug.log
