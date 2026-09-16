@@ -1,22 +1,21 @@
-// Firebase project connection — set up in the next session.
+// Firebase project connection.
 //
-// 1. Create a project at https://console.firebase.google.com
-// 2. Enable Authentication (Email/Password) and Firestore Database
-// 3. In Project Settings > General, register a Web App and copy the config object here
-// 4. NEVER commit real Firebase keys directly if the repo is public — use a .env file instead
-//    (Vite reads variables prefixed with VITE_, e.g. import.meta.env.VITE_FIREBASE_API_KEY)
+// Keys are read from environment variables (see .env.example) rather than
+// hardcoded here — this file is safe to commit even though the repo is
+// public, because the real values live in a local .env file that's
+// gitignored and never pushed.
 
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "TODO",
-  authDomain: "TODO",
-  projectId: "TODO",
-  storageBucket: "TODO",
-  messagingSenderId: "TODO",
-  appId: "TODO",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 export const app = initializeApp(firebaseConfig);
