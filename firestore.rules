@@ -1,10 +1,10 @@
 rules_version = '2';
 
-// Key design decision: attendance_records can be CREATED but never UPDATED
-// or DELETED, enforced here at the database level. This means the
-// append-only guarantee isn't just "the app doesn't have an edit button" —
-// it's the database itself refusing to allow it, even if someone tried to
-// edit a record directly through the Firebase console or API.
+// Data is split into `users` (basic, roster-visible: name, role, teamId) and
+// `member_details` (sensitive: school/national ID, DOB, height, weight) —
+// Firestore rules can't restrict access at the individual-field level, so
+// this split is what makes it possible to let teammates see each other's
+// names without also exposing everyone's ID numbers and date of birth.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -25,11 +25,30 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      // Users can update their own profile, but can't change their own role
-      // (that has to be set by a captain/coach, handled separately).
-      allow update: if isSignedIn() && request.auth.uid == userId
-                    && request.resource.data.role == resource.data.role;
+      allow create: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isCaptainOrCoach(request.resource.data.teamId)
+      );
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && request.resource.data.role == resource.data.role) ||
+        isCaptainOrCoach(resource.data.teamId)
+      );
+    }
+
+    // Sensitive fields only — readable/writable by the person themselves or
+    // a captain/coach on their team. Never returned in the roster list, never
+    // included in the CSV export.
+    match /member_details/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || isCaptainOrCoach(resource.data.teamId)
+      );
+      allow create: if isSignedIn() && (
+        request.auth.uid == userId || isCaptainOrCoach(request.resource.data.teamId)
+      );
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId || isCaptainOrCoach(resource.data.teamId)
+      );
+      allow delete: if false;
     }
 
     match /teams/{teamId} {
@@ -38,9 +57,6 @@ service cloud.firestore {
 
       match /meta/{docId} {
         allow read: if isSignedIn();
-        // Written inside a transaction alongside attendance_records — kept
-        // open to any signed-in user for now since the transaction logic
-        // itself controls correctness; tighten further once roles settle.
         allow write: if isSignedIn();
       }
     }
@@ -52,16 +68,15 @@ service cloud.firestore {
     }
 
     match /attendance_records/{recordId} {
-      // A member can read their own records; captains/coaches can read
-      // everyone's on their team (needed for the spot-check and export).
       allow read: if isSignedIn()
         && (resource.data.userId == request.auth.uid || isCaptainOrCoach(resource.data.teamId));
-
-      // Anyone signed in can create a record, but only for themselves —
-      // no marking someone else present.
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
 
-      // Append-only: no edits, no deletes, for anyone, ever.
+    match /verifications/{verificationId} {
+      allow read: if isSignedIn();
+      allow create: if isCaptainOrCoach(request.resource.data.teamId);
       allow update, delete: if false;
     }
   }
